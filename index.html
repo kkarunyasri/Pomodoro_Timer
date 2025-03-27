@@ -5,31 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Pomodoro Timer</title>
     <style>
-        /* Basic styling to make it look nice */
         body {
-            background-color: lightblue; /* Changed to a simple color */
+            background-color: lightblue;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             font-family: Arial, sans-serif;
+            margin: 0;
+            position: relative;
         }
 
         .container {
             background-color: white;
-            padding: 20px; /* Simple padding */
-            border: 2px solid black; /* Added a border instead of fancy shadow */
-            width: 300px; /* Smaller width for simplicity */
+            padding: 20px;
+            border: 2px solid black;
+            width: 300px;
+        }
+
+        .title {
+            font-size: 24px;
+            text-align: center;
+            color: #1a1a1a; /* Dark gray */
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 900; /* Maximum boldness */
+            margin-bottom: 20px; /* Gap between title and timer */
         }
 
         .timer-display {
-            font-size: 50px; /* Big numbers for the timer */
+            font-size: 50px;
             text-align: center;
             margin: 20px 0;
         }
 
         .controls {
-            text-align: center; /* Center the buttons */
+            text-align: center;
             margin-bottom: 20px;
         }
 
@@ -39,23 +49,22 @@
         }
 
         button {
-            padding: 10px; /* Simple button size */
-            background-color: lightgreen; /* Bright, basic color */
+            padding: 10px;
+            background-color: lightgreen;
             border: none;
             cursor: pointer;
         }
 
         button:hover {
-            background-color: green; /* Darker green when hovering */
+            background-color: green;
             color: white;
         }
 
         button.active {
-            background-color: yellow; /* Highlight active mode */
+            background-color: yellow;
             color: black;
         }
 
-        /* Progress bar - kept it simple */
         .progress {
             height: 10px;
             background-color: grey;
@@ -64,13 +73,46 @@
 
         .progress-bar {
             height: 100%;
-            background-color: red; /* Bright red for visibility */
+            background-color: red;
             width: 0%;
+        }
+
+        .notes-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+
+        .notes-section button {
+            background-color: lightblue;
+        }
+
+        .notes-section button:hover {
+            background-color: blue;
+            color: white;
+        }
+
+        .names {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 14px;
+            color: black;
+            text-align: right;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="title">POMO_TIMER</div>
         <div class="timer-display">25:00</div>
         <div class="controls">
             <button id="start">Start</button>
@@ -78,97 +120,113 @@
             <button id="reset">Reset</button>
         </div>
         <div class="mode-buttons">
-            <button class="mode active" data-time="25">Pomodoro</button> <!-- Changed from "Work Time" to "Pomodoro" -->
+            <button class="mode active" data-time="25">Pomodoro</button>
             <button class="mode" data-time="5">Short Break</button>
             <button class="mode" data-time="15">Long Break</button>
         </div>
         <div class="progress">
             <div class="progress-bar"></div>
         </div>
+        <div class="notes-section">
+            <textarea id="notes" placeholder="Write your notes here..."></textarea>
+            <button id="save-notes">Save Notes</button>
+        </div>
     </div>
 
-    <audio id="beep" src="https://www.soundjay.com/buttons/beep-01a.mp3"></audio> <!-- Sound for when timer ends -->
+    <div class="names">
+        Karunya Abhinaya<br>
+        Padmapriya<br>
+        from CSE-B
+    </div>
+
+    <audio id="beep" src="https://www.soundjay.com/buttons/beep-01a.mp3"></audio>
 
     <script>
-        // Get all the elements I need
         const timerDisplay = document.querySelector('.timer-display');
         const startBtn = document.querySelector('#start');
         const pauseBtn = document.querySelector('#pause');
         const resetBtn = document.querySelector('#reset');
         const modeButtons = document.querySelectorAll('.mode');
         const progressBar = document.querySelector('.progress-bar');
-        const beepSound = document.querySelector('#beep'); // Added sound element
+        const beepSound = document.querySelector('#beep');
+        const notesInput = document.querySelector('#notes');
+        const saveNotesBtn = document.querySelector('#save-notes');
 
-        let timeLeft = 25 * 60; // Start with 25 minutes in seconds
-        let timerId = null; // To keep track of the timer
-        let initialTime = 25 * 60; // To reset back to this
-        let isRunning = false; // Check if timer is going
+        let timeLeft = 25 * 60;
+        let timerId = null;
+        let initialTime = 25 * 60;
+        let isRunning = false;
 
-        // Show the time on screen
+        window.onload = function() {
+            const savedNotes = localStorage.getItem('pomoNotes');
+            if (savedNotes) {
+                notesInput.value = savedNotes;
+            }
+            updateDisplay();
+        };
+
         function updateDisplay() {
-            let minutes = Math.floor(timeLeft / 60); // Get minutes
-            let seconds = timeLeft % 60; // Get seconds
-            timerDisplay.textContent = minutes + ":" + (seconds < 10 ? "0" + seconds : seconds); // Add 0 if seconds < 10
-            updateProgress(); // Update the red bar
+            let minutes = Math.floor(timeLeft / 60);
+            let seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes}:${seconds < 10 ? "0" + seconds : seconds}`;
+            updateProgress();
         }
 
-        // Make the progress bar move
         function updateProgress() {
-            let progress = ((initialTime - timeLeft) / initialTime) * 100; // How much is done
-            progressBar.style.width = progress + "%"; // Move the bar
+            let progress = ((initialTime - timeLeft) / initialTime) * 100;
+            progressBar.style.width = progress + "%";
         }
 
-        // Start counting down
         function startTimer() {
-            if (!isRunning) { // Only start if not already running
+            if (!isRunning) {
                 isRunning = true;
                 timerId = setInterval(() => {
                     if (timeLeft > 0) {
-                        timeLeft = timeLeft - 1; // Decrease time
+                        timeLeft--;
                         updateDisplay();
                     } else {
-                        clearInterval(timerId); // Stop the timer
+                        clearInterval(timerId);
                         isRunning = false;
-                        beepSound.play(); // Play beep sound when done
+                        beepSound.play();
                         alert("Time’s up! Good job!");
                     }
-                }, 1000); // Every second
+                }, 1000);
             }
         }
 
-        // Pause the timer
         function pauseTimer() {
-            clearInterval(timerId); // Stop counting
+            clearInterval(timerId);
             isRunning = false;
         }
 
-        // Reset everything
         function resetTimer() {
             clearInterval(timerId);
             isRunning = false;
-            timeLeft = initialTime; // Go back to starting time
+            timeLeft = initialTime;
             updateDisplay();
         }
 
-        // Change modes when clicking buttons
         modeButtons.forEach(button => {
             button.addEventListener('click', () => {
-                modeButtons.forEach(btn => btn.classList.remove('active')); // Remove yellow from others
-                button.classList.add('active'); // Make this one yellow
+                modeButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
                 
-                let minutes = Number(button.dataset.time); // Get the time from button
-                initialTime = minutes * 60; // Set the new time
+                let minutes = Number(button.dataset.time);
+                initialTime = minutes * 60;
                 timeLeft = initialTime;
-                resetTimer(); // Reset with new time
+                resetTimer();
             });
         });
 
-        // Button clicks
+        saveNotesBtn.addEventListener('click', () => {
+            const notes = notesInput.value;
+            localStorage.setItem('pomoNotes', notes);
+            alert("Notes saved!");
+        });
+
         startBtn.addEventListener('click', startTimer);
         pauseBtn.addEventListener('click', pauseTimer);
         resetBtn.addEventListener('click', resetTimer);
-
-        updateDisplay(); // Show the time when page loads
     </script>
 </body>
 </html>
